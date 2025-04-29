@@ -13,12 +13,12 @@ class DatabaseConfig:
     port: int = 5432
 
 
-class DatabaseManager:
+class DatabaseBuilder:
     """Класс для управления созданием базы данных и таблиц."""
 
     def __init__(self, config: DatabaseConfig):
         """
-        Инициализация менеджера базы данных.
+        Инициализация построителя базы данных.
 
         Args:
             config: Конфигурация базы данных

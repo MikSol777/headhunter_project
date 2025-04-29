@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from typing import List
-from src.database import DatabaseConfig, DatabaseManager
+from src.database import DatabaseConfig, DatabaseBuilder
 from src.hh_api import HHAPI, Company, HHVacancy
 from src.db_manager import DBManager
 
@@ -42,14 +42,14 @@ def main():
     )
 
     # Initialize database
-    db_manager = DatabaseManager(config)
+    db_builder = DatabaseBuilder(config)
     
     try:
         # Создание базы данных и таблиц
         print("Создание базы данных...")
-        db_manager.create_database()
-        db_manager.connect()
-        db_manager.create_tables()
+        db_builder.create_database()
+        db_builder.connect()
+        db_builder.create_tables()
         
         # Initialize API client
         hh_api = HHAPI()
@@ -60,7 +60,7 @@ def main():
             
             # Get company info
             company = hh_api.get_company(company_id)
-            db_manager.insert_company(
+            db_builder.insert_company(
                 company_id=company.id,
                 name=company.name,
                 description=company.description,
@@ -70,7 +70,7 @@ def main():
             # Get company vacancies
             vacancies = hh_api.get_company_vacancies(company_id)
             for vacancy in vacancies:
-                db_manager.insert_vacancy(
+                db_builder.insert_vacancy(
                     vacancy_id=vacancy.id,
                     title=vacancy.title,
                     salary_from=vacancy.salary_from,
@@ -81,31 +81,10 @@ def main():
 
             print(f"Обработано {len(vacancies)} вакансий")
         
-        print("\nАнализ данных:")
-        print("1. Количество вакансий по компаниям:")
-        for company in db_manager.get_companies_and_vacancies_count():
-            print(f"   {company['name']}: {company['vacancies']} вакансий")
-        
-        avg_salary = db_manager.get_avg_salary()
-        print(f"\n2. Средняя зарплата: {avg_salary:.2f} руб.")
-        
-        print("\n3. Вакансии с зарплатой выше средней:")
-        for vacancy in db_manager.get_vacancies_with_higher_salary():
-            print(f"   {vacancy.company_name} - {vacancy.title}")
-            print(f"   Зарплата: {vacancy.salary_from}-{vacancy.salary_to} руб.")
-            print(f"   URL: {vacancy.url}\n")
-        
-        keyword = "Python"
-        print(f"\n4. Вакансии с ключевым словом '{keyword}':")
-        for vacancy in db_manager.get_vacancies_with_keyword(keyword):
-            print(f"   {vacancy.company_name} - {vacancy.title}")
-            print(f"   Зарплата: {vacancy.salary_from}-{vacancy.salary_to} руб.")
-            print(f"   URL: {vacancy.url}\n")
-            
     except Exception as e:
         print(f"Произошла ошибка: {e}")
     finally:
-        db_manager.close()
+        db_builder.close()
 
     # Initialize DBManager for queries
     db = DBManager(
@@ -116,21 +95,34 @@ def main():
         port=config.port
     )
 
-    # Example queries
-    print("\nCompanies and their vacancy counts:")
+    # Вывод результатов анализа
+    print("\nАнализ данных:")
+    print("1. Количество вакансий по компаниям:")
     for company in db.get_companies_and_vacancies_count():
-        print(f"{company['company']}: {company['vacancies']} vacancies")
-
-    print("\nAverage salary:", db.get_avg_salary())
-
-    print("\nVacancies with higher than average salary:")
+        print(f"   {company['company']}: {company['vacancies']} вакансий")
+    
+    avg_salary = db.get_avg_salary()
+    print(f"\n2. Средняя зарплата: {avg_salary:.2f} руб.")
+    
+    print("\n3. Вакансии с зарплатой выше средней:")
     for vacancy in db.get_vacancies_with_higher_salary():
-        print(f"{vacancy.company_name} - {vacancy.title}: {vacancy.salary_from}-{vacancy.salary_to}")
-
-    keyword = "python"
-    print(f"\nVacancies with keyword '{keyword}':")
+        print(f"   {vacancy.company_name} - {vacancy.title}")
+        print(f"   Зарплата: {vacancy.salary_from}-{vacancy.salary_to} руб.")
+        print(f"   URL: {vacancy.url}\n")
+    
+    keyword = "Python"
+    print(f"\n4. Вакансии с ключевым словом '{keyword}':")
     for vacancy in db.get_vacancies_with_keyword(keyword):
-        print(f"{vacancy.company_name} - {vacancy.title}: {vacancy.salary_from}-{vacancy.salary_to}")
+        print(f"   {vacancy.company_name} - {vacancy.title}")
+        print(f"   Зарплата: {vacancy.salary_from}-{vacancy.salary_to} руб.")
+        print(f"   URL: {vacancy.url}\n")
+
+    # Вывод всех вакансий
+    print("\n5. Все вакансии:")
+    for vacancy in db.get_all_vacancies():
+        print(f"   {vacancy.company_name} - {vacancy.title}")
+        print(f"   Зарплата: {vacancy.salary_from}-{vacancy.salary_to} руб.")
+        print(f"   URL: {vacancy.url}\n")
 
 
 if __name__ == "__main__":
